@@ -1,0 +1,40 @@
+{
+  "nodePos": {
+    "initial": {
+      "x": 100,
+      "y": 300
+    },
+    "register": {
+      "x": 412,
+      "y": 128
+    },
+    "update": {
+      "x": 412,
+      "y": 408
+    },
+    "upsert-redis": {
+      "x": 888,
+      "y": 268
+    },
+    "check-health-url": {
+      "x": 1364,
+      "y": 160
+    },
+    "schedule-health-check": {
+      "x": 1840,
+      "y": 100
+    },
+    "completed": {
+      "x": 2316,
+      "y": 192
+    },
+    "error": {
+      "x": 1364,
+      "y": 408
+    },
+    "__start__": {
+      "x": -212,
+      "y": 300
+    }
+  }
+}

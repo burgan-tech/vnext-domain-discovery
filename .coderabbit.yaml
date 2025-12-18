@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit AI Configuration for vNext Core Domain System
+# Project: @burgan-tech/vnext-core - Core workflow and schema definitions
+# https://docs.coderabbit.ai/guides/configure-coderabbit
+
+# Language settings
+language: en-US
+
+# Review settings
+reviews:
+  # Enable reviews on all branches, not just the default branch
+  review_status: true
+  # Enable auto reviews on all target branches
+  auto_review:
+    enabled: true
+    # Review all branches including non-default ones - vNext specific branches
+    base_branches:
+      - master
+      - main
+      - develop
+      - "release-v*"
+      - "release/*"
+      - "feature/*"
+      - "hotfix/*"
+      - "bugfix/*"
+  # Request changes for critical schema/workflow violations
+  request_changes_workflow: true
+
+# What to review
+review:
+  # Enable review of vNext core domain files
+  include_patterns:
+    # Core JavaScript/Node.js files
+    - "**/*.js"
+    - "**/*.ts"
+    - "**/*.d.ts"
+    
+    # JSON Schema and Configuration files
+    - "**/*.json"
+    - "**/*.schema.json"
+    - "**/vnext.config.json"
+    - "**/package.json"
+    - "**/package-lock.json"
+    
+    # C# Script files for workflow mappings
+    - "**/*.csx"
+    - "**/*.cs"
+    
+    # Documentation and configuration
+    - "**/*.md"
+    - "**/*.yml"
+    - "**/*.yaml"
+    - "**/.cursorrules"
+    
+    # vNext specific workflow files
+    - "**/core/**/*.json"
+    - "**/Schemas/**"
+    - "**/Workflows/**"
+    - "**/Tasks/**"
+    - "**/Views/**"
+    - "**/Functions/**"
+    - "**/Extensions/**"
+  
+  # Skip certain files/directories
+  exclude_patterns:
+    # Standard Node.js exclusions
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/coverage/**"
+    - "**/.nyc_output/**"
+    
+    # Logs and temporary files
+    - "**/logs/**"
+    - "**/*.log"
+    - "**/.DS_Store"
+    - "**/Thumbs.db"
+    
+    # Git and IDE files
+    - "**/.git/**"
+    - "**/.vscode/**"
+    - "**/.idea/**"
+    
+    # Keep files (placeholder files)
+    - "**/.gitkeep"
+
+# Chat settings
+chat:
+  # Enable chat functionality for vNext development collaboration
+  auto_reply: false
+
+# Early access features
+early_access: true

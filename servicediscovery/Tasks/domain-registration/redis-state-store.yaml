@@ -1,0 +1,28 @@
+# NOTE: This component is no longer used.
+# The workflow now uses the existing vnext-execution-state component located at:
+# /Users/U05645/Projects/vnext-runtime-for-git/vnext-runtime/vnext/execution/dapr/components/state.yaml
+#
+# Task configurations have been updated to use:
+# - Store name: vnext-execution-state
+# - URL: http://vnext-execution-dapr:43110/v1.0/state/vnext-execution-state
+#
+# This file is kept for reference only.
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: redis-state-store
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: vnext-redis:6379
+  - name: redisPassword
+    value: ""
+  - name: enableTLS
+    value: "false"
+  - name: maxRetries
+    value: "3"
+  - name: maxRetryBackoff
+    value: "2s"
