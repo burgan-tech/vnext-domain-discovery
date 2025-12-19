@@ -17,7 +17,7 @@ function loadConfig() {
 function getPathsConfig() {
   const config = loadConfig();
   const defaults = {
-    componentsRoot: 'servicediscovery',
+    componentsRoot: 'discovery',
     schemas: 'Schemas',
     workflows: 'Workflows',
     tasks: 'Tasks',
@@ -105,7 +105,7 @@ async function getDomainName() {
     if (validateDomainName(domainName)) {
       return domainName;
     } else {
-      console.error(`❌ Invalid domain name in DOMAIN_NAME environment variable: $servicediscovery`);
+      console.error(`❌ Invalid domain name in DOMAIN_NAME environment variable: $discovery`);
       process.exit(1);
     }
   }
@@ -114,7 +114,7 @@ async function getDomainName() {
   return await promptDomainName();
 }
 
-// Replace servicediscovery in a file
+// Replace discovery in a file
 function replaceInFile(filePath, domainName) {
   try {
     let content = fs.readFileSync(filePath, 'utf8');
@@ -132,7 +132,7 @@ function replaceInFile(filePath, domainName) {
   }
 }
 
-// Replace servicediscovery in all files recursively
+// Replace discovery in all files recursively
 function replaceInDirectory(dirPath, domainName, processedFiles = new Set()) {
   if (!fs.existsSync(dirPath)) {
     return;
@@ -171,9 +171,9 @@ function replaceInDirectory(dirPath, domainName, processedFiles = new Set()) {
   }
 }
 
-// Rename servicediscovery directory
+// Rename discovery directory
 function renameDomainDirectory(domainName) {
-  const templateDir = 'servicediscovery';
+  const templateDir = 'discovery';
   const targetDir = domainName;
   
   if (fs.existsSync(templateDir)) {
@@ -206,22 +206,22 @@ async function setup() {
     return;
   }
 
-  // Check if servicediscovery directory exists (template not yet configured)
-  if (!fs.existsSync('servicediscovery')) {
-    console.log('⚠️  Template directory servicediscovery not found');
+  // Check if discovery directory exists (template not yet configured)
+  if (!fs.existsSync('discovery')) {
+    console.log('⚠️  Template directory discovery not found');
     console.log('   This might already be a configured project.\n');
     return;
   }
 
-  console.log('🚀 vNext Template Setup');
+  console.log('🚀 vNext Discovery Setup');
   console.log('=======================\n');
 
   // Get domain name from command line or prompt
   const domainName = await getDomainName();
-  console.log(`\n📝 Setting up domain: $servicediscovery\n`);
+  console.log(`\n📝 Setting up domain: $discovery\n`);
 
   // Replace in all files
-  console.log('🔄 Replacing servicediscovery in files...');
+  console.log('🔄 Replacing discovery in files...');
   const processedFiles = new Set();
   replaceInDirectory('.', domainName, processedFiles);
   console.log(`  ✓ Processed ${processedFiles.size} file(s)`);
@@ -231,7 +231,7 @@ async function setup() {
   renameDomainDirectory(domainName);
 
   console.log('\n✅ Setup complete!');
-  console.log(`\nYour domain "$servicediscovery" is now configured.`);
+  console.log(`\nYour domain "$discovery" is now configured.`);
   console.log('You can start adding your schemas, workflows, tasks, and other components.\n');
 }
 

@@ -14,7 +14,7 @@ function loadConfig() {
 function getPathsConfig() {
   const config = loadConfig();
   const defaults = {
-    componentsRoot: 'servicediscovery',
+    componentsRoot: 'discovery',
     schemas: 'Schemas',
     workflows: 'Workflows',
     tasks: 'Tasks',

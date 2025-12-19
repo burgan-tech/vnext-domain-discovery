@@ -1,14 +1,14 @@
 {
-  "key": "update-domain",
+  "key": "update-health-status",
   "flow": "sys-tasks",
-  "domain": "servicediscovery",
+  "domain": "discovery",
   "version": "1.0.0",
   "flowVersion": "1.0.0",
   "tags": [
     "domain",
     "redis",
-    "update",
-    "registration"
+    "health-check",
+    "update"
   ],
   "attributes": {
     "type": "6",

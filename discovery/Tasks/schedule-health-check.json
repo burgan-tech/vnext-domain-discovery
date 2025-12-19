@@ -1,7 +1,7 @@
 {
   "key": "schedule-health-check",
   "flow": "sys-tasks",
-  "domain": "servicediscovery",
+  "domain": "discovery",
   "version": "1.0.0",
   "flowVersion": "1.0.0",
   "tags": [
@@ -13,8 +13,8 @@
   "attributes": {
     "type": "14",
     "config": {
-      "domain": "servicediscovery",
-      "key": "domain-health-check",
+      "domain": "discovery",
+      "flow": "domain-health-check",
       "version": "1.0.0"
     }
   }

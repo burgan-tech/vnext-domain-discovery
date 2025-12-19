@@ -1,7 +1,7 @@
 {
   "key": "domain-registration",
   "flow": "sys-flows",
-  "domain": "servicediscovery",
+  "domain": "discovery",
   "version": "1.0.0",
   "tags": [
     "domain",
@@ -66,7 +66,7 @@
             "order": 1,
             "task": {
               "key": "check-domain-exists",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
@@ -149,7 +149,7 @@
             "order": 1,
             "task": {
               "key": "register-domain",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
@@ -208,7 +208,7 @@
             "order": 1,
             "task": {
               "key": "update-domain",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
@@ -336,7 +336,7 @@
             "order": 1,
             "task": {
               "key": "get-domain-health-url",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
@@ -443,7 +443,7 @@
                 "order": 1,
                 "task": {
                   "key": "schedule-health-check",
-                  "domain": "servicediscovery",
+                  "domain": "discovery",
                   "version": "1.0.0",
                   "flow": "sys-tasks"
                 },

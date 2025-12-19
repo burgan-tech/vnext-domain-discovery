@@ -557,7 +557,7 @@ validate('Domain directory structure', () => {
   }
   
   if (!fs.existsSync(domainName)) {
-    throw new Error(`Domain directory $servicediscovery does not exist`);
+    throw new Error(`Domain directory $core does not exist`);
   }
   
   // Check for vnext structure directories using paths config
@@ -575,7 +575,7 @@ validate('Domain directory structure', () => {
     throw new Error('No vnext structure directories found in domain directory');
   }
   
-  console.log(`  ✓ Domain directory: $servicediscovery`);
+  console.log(`  ✓ Domain directory: $core`);
   console.log(`  ✓ Found directories: ${existingDirs.join(', ')}`);
   
   return true;

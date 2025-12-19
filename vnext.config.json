@@ -1,12 +1,11 @@
 {
   "version": "1.0.0",
-  "description": "servicediscovery Domain Definition Configuration",
-  "domain": "servicediscovery",
+  "description": "vNext Discovery Domain Definition Configuration",
+  "domain": "discovery",
   "runtimeVersion": "0.0.26",
   "schemaVersion": "0.0.28",
-  "componentVersion": "0.0.18",
   "paths": {
-    "componentsRoot": "servicediscovery",
+    "componentsRoot": "discovery",
     "tasks": "Tasks",
     "views": "Views",
     "functions": "Functions",
@@ -23,11 +22,11 @@
     "extensions": [],
     "visibility": "public",
     "metadata": {
-      "description": "Exported components for servicediscovery domain",
-      "maintainer": "vNext Team",
+      "description": "Exported components for discovery domain",
+      "maintainer": "Burgan Tech",
       "license": "MIT",
       "keywords": [
-        "servicediscovery",
+        "discovery",
         "vnext",
         "workflow",
         "domain"

@@ -1,0 +1,23 @@
+# vNext Sys-Flow - Cursor Ignore Rules
+
+# Build and deployment files
+dist/
+node_modules/
+
+# Binary and log files
+*.log
+*.tmp
+*.cache
+
+# IDE files (VS Code workspace settings except cursor settings)
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.bak
+*.orig

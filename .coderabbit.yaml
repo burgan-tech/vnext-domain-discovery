@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# CodeRabbit AI Configuration for vNext Core Domain System
-# Project: @burgan-tech/vnext-core - Core workflow and schema definitions
+# CodeRabbit AI Configuration for vNext Discovery Domain System
+# Project: @burgan-tech/vnext-discovery - Discovery workflow and schema definitions
 # https://docs.coderabbit.ai/guides/configure-coderabbit
 
 # Language settings
@@ -28,7 +28,7 @@ reviews:
 
 # What to review
 review:
-  # Enable review of vNext core domain files
+  # Enable review of vNext discovery domain files
   include_patterns:
     # Core JavaScript/Node.js files
     - "**/*.js"
@@ -53,7 +53,7 @@ review:
     - "**/.cursorrules"
     
     # vNext specific workflow files
-    - "**/core/**/*.json"
+    - "**/discovery/**/*.json"
     - "**/Schemas/**"
     - "**/Workflows/**"
     - "**/Tasks/**"

@@ -1,14 +1,14 @@
 {
-  "key": "get-domain-health-url",
+  "key": "check-domain-exists",
   "flow": "sys-tasks",
-  "domain": "servicediscovery",
+  "domain": "discovery",
   "version": "1.0.0",
   "flowVersion": "1.0.0",
   "tags": [
     "domain",
     "redis",
-    "health-check",
-    "lookup"
+    "lookup",
+    "registration"
   ],
   "attributes": {
     "type": "6",

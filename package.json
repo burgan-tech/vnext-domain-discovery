@@ -1,7 +1,7 @@
 {
-  "name": "@burgan-tech/vnext-template",
+  "name": "@burgan-tech/vnext-discovery",
   "version": "0.0.6",
-  "description": "vNext template package with domain-based workflow components and schema validation",
+  "description": "vNext Domain Discovery",
   "main": "index.js",
   "scripts": {
     "test": "node test.js",
@@ -22,44 +22,47 @@
   "keywords": [
     "vnext",
     "workflow",
-    "template",
-    "schema",
-    "domain-driven",
-    "burgan-tech",
-    "process-automation"
+    "discovery",
+    "burgan-tech"
   ],
   "author": "Burgan Tech Team <dev@burgan-tech.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/burgan-tech/vnext-template.git"
+    "url": "git+https://github.com/burgan-tech/vnext-domain-discovery.git"
   },
   "bugs": {
-    "url": "https://github.com/burgan-tech/vnext-template/issues"
+    "url": "https://github.com/burgan-tech/vnext-domain-discovery/issues"
   },
-  "homepage": "https://github.com/burgan-tech/vnext-template#readme",
+  "homepage": "https://github.com/burgan-tech/vnext-domain-discovery#readme",
   "files": [
     "index.js",
     "init.js",
     "setup.js",
     "build.js",
-    "servicediscovery/",
+    "discovery/",
     "vnext.config.json",
     "README.md",
     "package.json",
+    "CHANGELOG.md",
     "LICENSE",
+    "test.js",
     "validate.js",
-    "sync-schema-version.js"
+    "sync-schema-version.js",
+    "test-domain-detection.sh",
+    ".cursorrules",
+    "gitignore",
+    "gitattributes"
   ],
   "engines": {
     "node": ">=16.0.0"
   },
   "devDependencies": {
-    "@burgan-tech/vnext-schema": "^0.0.23",
+    "@burgan-tech/vnext-schema": "^0.0.28",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1"
   },
   "dependencies": {
-    "@burgan-tech/vnext-schema": "^0.0.23"
+    "@burgan-tech/vnext-schema": "^0.0.28"
   }
 }

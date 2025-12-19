@@ -1,7 +1,7 @@
 {
   "key": "domain-health-check",
   "flow": "sys-flows",
-  "domain": "servicediscovery",
+  "domain": "discovery",
   "version": "1.0.0",
   "tags": [
     "domain",
@@ -111,7 +111,7 @@
             "order": 1,
             "task": {
               "key": "get-domain-health-url",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
@@ -194,7 +194,7 @@
             "order": 1,
             "task": {
               "key": "check-health-endpoint",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
@@ -322,7 +322,7 @@
             "order": 1,
             "task": {
               "key": "update-health-status",
-              "domain": "servicediscovery",
+              "domain": "discovery",
               "version": "1.0.0",
               "flow": "sys-tasks"
             },
