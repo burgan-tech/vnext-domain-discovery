@@ -46,17 +46,17 @@ public class UpdateHealthStatusMapping : IMapping
             if (domainData != null)
             {
                 if (domainData.name != null) updateData["name"] = domainData.name;
-                if (domainData._baseUrl != null) updateData["_baseUrl"] = domainData._baseUrl;
-                if (domainData._healthUrl != null) updateData["_healthUrl"] = domainData._healthUrl;
-                if (domainData._appId != null) updateData["_appId"] = domainData._appId;
+                if (domainData.baseUrl != null) updateData["baseUrl"] = domainData.baseUrl;
+                if (domainData.healthUrl != null) updateData["healthUrl"] = domainData.healthUrl;
+                if (domainData.appId != null) updateData["appId"] = domainData.appId;
                 if (domainData.flows != null) updateData["flows"] = domainData.flows;
                 // Preserve any other fields that might exist
                 foreach (var prop in domainData.GetType().GetProperties())
                 {
                     var propName = prop.Name;
-                    if (propName != "_isHealthy" && propName != "_updatedAt" && 
-                        propName != "name" && propName != "_baseUrl" && 
-                        propName != "_healthUrl" && propName != "_appId" && propName != "flows")
+                    if (propName != "isHealthy" && propName != "updatedAt" && 
+                        propName != "name" && propName != "baseUrl" && 
+                        propName != "healthUrl" && propName != "appId" && propName != "flows")
                     {
                         var value = prop.GetValue(domainData);
                         if (value != null)
@@ -68,8 +68,8 @@ public class UpdateHealthStatusMapping : IMapping
             }
             
             // Update only health-related fields
-            updateData["_isHealthy"] = isHealthy;
-            updateData["_updatedAt"] = DateTime.UtcNow.ToString("o");
+            updateData["isHealthy"] = isHealthy;
+            updateData["updatedAt"] = DateTime.UtcNow.ToString("o");
             
             // Ensure name is set
             if (domainName != null)

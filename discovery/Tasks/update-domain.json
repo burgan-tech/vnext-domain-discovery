@@ -13,7 +13,7 @@
   "attributes": {
     "type": "6",
     "config": {
-      "url": "http://localhost:53110/v1.0/state/vnext-execution-state",
+      "url": "{{discoveryDaprUrl}/v1.0/state/vnext-execution-state",
       "method": "POST",
       "headers": {
         "Content-Type": "application/json"

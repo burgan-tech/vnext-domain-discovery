@@ -6,20 +6,17 @@
   "flowVersion": "1.0.0",
   "tags": [
     "domain",
-    "redis",
+    "workflow",
+    "instance",
     "lookup",
     "registration"
   ],
   "attributes": {
-    "type": "6",
+    "type": "3",
     "config": {
-      "url": "http://localhost:53110/v1.0/state/vnext-execution-state/domain:{domainName}",
-      "method": "GET",
-      "headers": {
-        "Content-Type": "application/json"
-      },
-      "timeoutSeconds": 10,
-      "validateSsl": true
+      "appId": "{{discoveryAPPId}",
+      "methodName": "/api/v1/discovery/workflows/domain/instances/{domainName}/functions/data",
+      "httpVerb": "GET"
     }
   }
 }

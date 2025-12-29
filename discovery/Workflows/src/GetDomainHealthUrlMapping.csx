@@ -51,8 +51,8 @@ public class GetDomainHealthUrlMapping : IMapping
             // Domain exists (200 OK with data)
             if (statusCode == 200 && responseData != null)
             {
-                var baseUrl = responseData._baseUrl;
-                var healthUrl = responseData._healthUrl;
+                var baseUrl = responseData.baseUrl;
+                var healthUrl = responseData.healthUrl;
                 
                 // Construct full health URL
                 string fullHealthUrl = null;

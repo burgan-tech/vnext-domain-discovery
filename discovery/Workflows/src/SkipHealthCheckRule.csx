@@ -29,8 +29,8 @@ public class SkipHealthCheckRule : IConditionMapping
                 
                 if (existingDomain != null && domainData != null)
                 {
-                    var existingHealthUrl = existingDomain._healthUrl?.ToString();
-                    var newHealthUrl = domainData._healthUrl?.ToString();
+                    var existingHealthUrl = existingDomain.healthUrl?.ToString();
+                    var newHealthUrl = domainData.healthUrl?.ToString();
                     
                     // If healthUrl didn't change, skip
                     if (existingHealthUrl == newHealthUrl)

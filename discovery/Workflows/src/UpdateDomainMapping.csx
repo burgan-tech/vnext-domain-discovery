@@ -3,9 +3,9 @@ using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
 
 /// <summary>
-/// Update Domain Mapping - Updates existing domain in Redis
+/// Register Domain Mapping - Creates new domain in Redis
 /// </summary>
-public class UpdateDomainMapping : IMapping
+public class RegisterDomainMapping : IMapping
 {
     public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
     {
@@ -22,46 +22,22 @@ public class UpdateDomainMapping : IMapping
             var healthUrl = context.Instance?.Data?.healthUrl;
             var appId = context.Instance?.Data?.appId;
             // var flows = context.Instance?.Data?.flows;
-            var existingDomain = context.Instance?.Data?.existingDomain;
 
-            // Merge existing domain data with updates
-            var updateData = new Dictionary<string, dynamic>();
-            
-            // Copy existing data
-            if (existingDomain != null)
-            {
-                if (existingDomain.name != null) updateData["name"] = existingDomain.name;
-                if (existingDomain._baseUrl != null) updateData["_baseUrl"] = existingDomain._baseUrl;
-                if (existingDomain._healthUrl != null) updateData["_healthUrl"] = existingDomain._healthUrl;
-                if (existingDomain._appId != null) updateData["_appId"] = existingDomain._appId;
-                if (existingDomain._isHealthy != null) updateData["_isHealthy"] = existingDomain._isHealthy;
-                // if (existingDomain.flows != null) updateData["flows"] = existingDomain.flows;
-            }
-            
-            // Apply updates (only if provided)
-            if (baseUrl != null)
-                updateData["_baseUrl"] = baseUrl;
-            
-            if (healthUrl != null)
-                updateData["_healthUrl"] = healthUrl;
-            
-            if (appId != null)
-                updateData["_appId"] = appId;
-            
-            // if (flows != null)
-            //     updateData["flows"] = flows;
-            
-            updateData["_updatedAt"] = DateTime.UtcNow.ToString("o");
-            
-            // Ensure name is set
-            if (domainName != null)
-                updateData["name"] = domainName;
-
-            // Prepare state item for Dapr State Store API
+            // Prepare domain data for Dapr State Store API
+            // Dapr State Store expects array of state items
             var stateItem = new
             {
                 key = $"domain:{domainName}",
-                value = updateData
+                value = new
+                {
+                    name = domainName,
+                    baseUrl = baseUrl,
+                    healthUrl = healthUrl,
+                    appId = appId,
+                    isHealthy = true,
+                    updatedAt = DateTime.UtcNow.ToString("o"),
+                    // flows = flows ?? new { }
+                }
             };
 
             // Set body for HTTP POST request
@@ -73,7 +49,7 @@ public class UpdateDomainMapping : IMapping
         {
             return Task.FromResult(new ScriptResponse
             {
-                Key = "update-domain-error",
+                Key = "register-domain-update-error",
                 Data = new { error = ex.Message }
             });
         }
@@ -88,39 +64,39 @@ public class UpdateDomainMapping : IMapping
             var statusCode = context.Body?.statusCode ?? 500;
             var isSuccess = statusCode >= 200 && statusCode < 300;
 
-            // Successful update (204 No Content is success for state store)
+            // Successful registration (204 No Content is success for state store)
             if (isSuccess || statusCode == 204)
             {
                 return new ScriptResponse
                 {
-                    Key = "domain-updated",
+                    Key = "domain-cache-updated",
                     Data = new
                     {
                         domainRegistration = new
                         {
                             success = true,
                             operation = "update",
-                            updatedAt = DateTime.UtcNow
+                            registeredAt = DateTime.UtcNow
                         }
                     },
-                    Tags = new[] { "domain", "updated", "redis", "success" }
+                    Tags = new[] { "domain", "registered", "redis", "success" }
                 };
             }
-            // Update failed
+            // Registration failed
             else
             {
                 return new ScriptResponse
                 {
-                    Key = "domain-update-failed",
+                    Key = "domain-cache-update-failed",
                     Data = new
                     {
                         domainRegistration = new
                         {
                             success = false,
                             operation = "update",
-                            error = "Failed to update domain",
+                            error = "Failed to update cache domain",
                             statusCode = statusCode,
-                            updatedAt = DateTime.UtcNow
+                            registeredAt = DateTime.UtcNow
                         }
                     },
                     Tags = new[] { "domain", "update-failed", "redis", "error" }
@@ -140,7 +116,7 @@ public class UpdateDomainMapping : IMapping
                         operation = "update",
                         error = "Exception during domain update",
                         errorDescription = ex.Message,
-                        updatedAt = DateTime.UtcNow
+                        registeredAt = DateTime.UtcNow
                     }
                 },
                 Tags = new[] { "domain", "exception", "error" }

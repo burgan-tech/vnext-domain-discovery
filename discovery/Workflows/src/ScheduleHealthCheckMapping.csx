@@ -30,7 +30,7 @@ public class ScheduleHealthCheckMapping : IMapping
             subProcessTask.SetBody(new
             {
                 domainName = domainName,
-                healthUrl = healthUrl ?? domainData?._healthUrl,
+                healthUrl = healthUrl ?? domainData?.healthUrl,
                 domainData = domainData
             });
 

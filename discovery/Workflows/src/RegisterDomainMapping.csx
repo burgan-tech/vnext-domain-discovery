@@ -31,11 +31,11 @@ public class RegisterDomainMapping : IMapping
                 value = new
                 {
                     name = domainName,
-                    _baseUrl = baseUrl,
-                    _healthUrl = healthUrl,
-                    _appId = appId,
-                    _isHealthy = true,
-                    _updatedAt = DateTime.UtcNow.ToString("o"),
+                    baseUrl = baseUrl,
+                    healthUrl = healthUrl,
+                    appId = appId,
+                    isHealthy = true,
+                    updatedAt = DateTime.UtcNow.ToString("o"),
                     // flows = flows ?? new { }
                 }
             };

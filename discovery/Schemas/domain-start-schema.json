@@ -1,0 +1,38 @@
+{
+  "key": "domain-start",
+  "version": "1.0.0",
+  "domain": "discovery",
+  "flow": "sys-schemas",
+  "attributes": {
+    "type": "workflow",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://schemas.vnext.com/banking/domain-start.json",
+      "title": "Domain start transition Schema",
+      "description": "Domain start transition Schema",
+      "type": "object",
+      "required": [
+        "domainName"
+      ],
+      "properties": {
+        "domainName": {
+          "type": "string",
+          "description": "Domain name identifier"
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "Base URL of the domain service"
+        },
+        "healthUrl": {
+          "type": "string",
+          "description": "Health check URL of the domain service"
+        },
+        "appId": {
+          "type": "string",
+          "description": "Application identifier"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

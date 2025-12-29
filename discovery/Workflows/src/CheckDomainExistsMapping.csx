@@ -3,7 +3,8 @@ using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
 
 /// <summary>
-/// Check Domain Exists Mapping - Queries Redis for domain existence
+/// Check Domain Exists Mapping - Queries domain workflow instance for existence using DaprServiceTask
+/// Endpoint: /api/v1/discovery/workflows/domain/instances/{domainName}/functions/data
 /// </summary>
 public class CheckDomainExistsMapping : IMapping
 {
@@ -11,18 +12,21 @@ public class CheckDomainExistsMapping : IMapping
     {
         try
         {
-            var httpTask = task as HttpTask;
-            if (httpTask == null)
+            var daprServiceTask = task as DaprServiceTask;
+            if (daprServiceTask == null)
             {
-                throw new InvalidOperationException("Task must be an HttpTask");
+                throw new InvalidOperationException("Task must be a DaprServiceTask");
             }
 
             var domainName = context.Instance?.Data?.domainName;
             
-            // Replace {domainName} placeholder in URL
-            if (httpTask.Url != null)
+            // Replace {domainName} placeholder in methodName
+            // MethodName format: /api/v1/discovery/workflows/domain/instances/{domainName}/functions/data
+            if (!string.IsNullOrEmpty(domainName?.ToString()))
             {
-                httpTask.SetUrl(httpTask.Url.Replace("{domainName}", domainName?.ToString() ?? ""));
+                var methodName = daprServiceTask.MethodName?.Replace("{domainName}", domainName.ToString()) ?? 
+                                $"/api/v1/discovery/workflows/domain/instances/{domainName}/functions/data";
+                daprServiceTask.SetMethodName(methodName);
             }
 
             return Task.FromResult(new ScriptResponse());
@@ -41,16 +45,25 @@ public class CheckDomainExistsMapping : IMapping
     {
         try
         {
-            // Dapr State Store API returns:
-            // - 200 OK with value if key exists
-            // - 204 No Content if key doesn't exist
-            // - 404 Not Found if key doesn't exist (alternative)
+            // Workflow Instance Data API returns:
+            // - 200 OK with data (including etag) if instance exists
+            // - 404 Not Found if instance doesn't exist
             var statusCode = context.Body?.statusCode ?? 500;
             var responseData = context.Body;
             
-            // Domain exists (200 OK with data)
+            // Domain workflow instance exists (200 OK with data)
             if (statusCode == 200 && responseData != null)
             {
+                // Extract etag from response body (root level, lowercase)
+                // Response format: { "data": { "appId": "...", "healthUrl": "...", "domainName": "...", "baseUrl": "..." }, "etag": "...", "extensions": {} }
+                var eTag = responseData.data?.etag?.ToString();
+                
+                // Extract healthUrl and appId from existing domain data
+                // Domain data structure: direct properties in data object (no underscore prefix)
+                var existingHealthUrl = responseData.data?.data?.healthUrl?.ToString();
+                var existingBaseUrl = responseData.data?.data?.baseUrl?.ToString();
+                var existingAppId = responseData.data?.data?.appId?.ToString();
+                
                 return new ScriptResponse
                 {
                     Key = "domain-exists",
@@ -58,13 +71,17 @@ public class CheckDomainExistsMapping : IMapping
                     {
                         domainExists = true,
                         existingDomain = responseData,
+                        instanceETag = eTag,
+                        existingHealthUrl = existingHealthUrl,
+                        existingBaseUrl=existingBaseUrl,
+                        existingAppId = existingAppId,
                         checkedAt = DateTime.UtcNow
                     },
-                    Tags = new[] { "domain", "exists", "redis", "found" }
+                    Tags = new[] { "domain", "exists", "workflow", "instance", "found" }
                 };
             }
-            // Domain not found (204 No Content or 404 Not Found)
-            else if (statusCode == 204 || statusCode == 404)
+            // Domain workflow instance not found (404 Not Found)
+            else if (statusCode == 404)
             {
                 return new ScriptResponse
                 {
@@ -72,10 +89,13 @@ public class CheckDomainExistsMapping : IMapping
                     Data = new
                     {
                         domainExists = false,
-                        existingDomain = (object?)null,  // Explicitly set to null for healthUrl comparison
+                        existingDomain = (object?)null,
+                        instanceETag = (string?)null,
+                        existingHealthUrl = (string?)null,
+                        existingAppId = (string?)null,
                         checkedAt = DateTime.UtcNow
                     },
-                    Tags = new[] { "domain", "not-exists", "redis", "not-found" }
+                    Tags = new[] { "domain", "not-exists", "workflow", "instance", "not-found" }
                 };
             }
             // Unexpected status code
@@ -87,8 +107,11 @@ public class CheckDomainExistsMapping : IMapping
                     Data = new
                     {
                         domainExists = false,
-                        existingDomain = (object?)null,  // Set to null on error
-                        error = "Unexpected status code during domain check",
+                        existingDomain = (object?)null,
+                        instanceETag = (string?)null,
+                        existingHealthUrl = (string?)null,
+                        existingAppId = (string?)null,
+                        error = "Unexpected status code during domain instance check",
                         statusCode = statusCode,
                         checkedAt = DateTime.UtcNow
                     },
@@ -104,8 +127,11 @@ public class CheckDomainExistsMapping : IMapping
                 Data = new
                 {
                     domainExists = false,
-                    existingDomain = (object?)null,  // Set to null on exception
-                    error = "Exception during domain check",
+                    existingDomain = (object?)null,
+                    instanceETag = (string?)null,
+                    existingHealthUrl = (string?)null,
+                    existingAppId = (string?)null,
+                    error = "Exception during domain instance check",
                     errorDescription = ex.Message,
                     checkedAt = DateTime.UtcNow
                 },

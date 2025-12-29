@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 
 /// <summary>
-/// Domain Not Exists Rule - Checks if domain does not exist in Redis
+/// Domain Not Exists Rule - Checks if domain does not exist in workflow instance
 /// </summary>
 public class DomainNotExistsRule : IConditionMapping
 {

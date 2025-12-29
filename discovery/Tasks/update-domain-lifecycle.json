@@ -1,0 +1,22 @@
+{
+  "key": "update-domain-lifecycle",
+  "flow": "sys-tasks",
+  "domain": "discovery",
+  "version": "1.0.0",
+  "flowVersion": "1.0.0",
+  "tags": [
+    "domain",
+    "trigger",
+    "lifecycle",
+    "update"
+  ],
+  "attributes": {
+    "type": "12",
+    "config": {
+      "domain": "discovery",
+      "flow": "domain",
+      "transitionName": "update"
+    }
+  }
+}
+
