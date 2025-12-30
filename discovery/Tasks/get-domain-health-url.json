@@ -13,7 +13,7 @@
   "attributes": {
     "type": "6",
     "config": {
-      "url": "{{discoveryDaprUrl}/v1.0/state/vnext-execution-state/domain:{domainName}",
+      "url": "{{discoveryDaprUrl}}/v1.0/state/vnext-execution-state/domain:{domainName}",
       "method": "GET",
       "headers": {
         "Content-Type": "application/json"
