@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "domain": "discovery",
   "flow": "sys-schemas",
+    "flowVersion": "1.0.0",
+  "tags": [
+    "domain",
+    "workflow",
+    "instance",
+    "lookup",
+    "registration"
+  ],
   "attributes": {
     "type": "workflow",
     "schema": {

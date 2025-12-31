@@ -58,15 +58,19 @@ public class RegisterDomainLifecycleMapping : IMapping
             // StartTask returns instanceId on success
             if (context.Body?.isSuccess == true)
             {
-                var instanceId = context.Body.data?.instanceId?.ToString();
-                
+
                 return new ScriptResponse
                 {
                     Key = "domain-lifecycle-started",
                     Data = new
                     {
+                         domainRegistration = new
+                        {
+                            success = true,
+                            operation = "register",
+                            registeredAt = DateTime.UtcNow
+                        },
                         domainLifecycleStarted = true,
-                        domainInstanceId = instanceId,
                         startedAt = DateTime.UtcNow,
                         status = "DOMAIN_LIFECYCLE_WORKFLOW_STARTED"
                     },
@@ -80,6 +84,14 @@ public class RegisterDomainLifecycleMapping : IMapping
                     Key = "domain-lifecycle-start-failed",
                     Data = new
                     {
+                           domainRegistration = new
+                        {
+                            success = false,
+                            operation = "register",
+                            error = "Failed to register domain",
+                            statusCode = context.Body?.statusCode ?? 500,
+                            registeredAt = DateTime.UtcNow
+                        },
                         domainLifecycleStarted = false,
                         error = context.Body?.errorMessage ?? "Failed to start domain lifecycle workflow",
                         startedAt = DateTime.UtcNow
@@ -98,7 +110,15 @@ public class RegisterDomainLifecycleMapping : IMapping
                     domainLifecycleStarted = false,
                     error = "Exception during domain lifecycle start",
                     errorDescription = ex.Message,
-                    startedAt = DateTime.UtcNow
+                    startedAt = DateTime.UtcNow,
+                     domainRegistration = new
+                    {
+                        success = false,
+                        operation = "register",
+                        error = "Exception during domain registration",
+                        errorDescription = ex.Message,
+                        registeredAt = DateTime.UtcNow
+                    }
                 },
                 Tags = new[] { "domain", "lifecycle", "exception", "error" }
             };

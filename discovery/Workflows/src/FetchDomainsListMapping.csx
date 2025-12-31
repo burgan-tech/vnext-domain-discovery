@@ -1,16 +1,17 @@
 using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
-
+using BBT.Workflow.Scripting.Functions;
 /// <summary>
 /// Fetch Domains List Mapping - Fetches domain list from API endpoint
 /// </summary>
-public class FetchDomainsListMapping : IMapping
+public class FetchDomainsListMapping :ScriptBase, IMapping
 {
     public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
     {
         try
         {
+            var appId = GetConfigValue("OrchestrationApi:AppId");
             var httpTask = task as HttpTask;
             if (httpTask == null)
             {

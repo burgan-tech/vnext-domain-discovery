@@ -14,7 +14,7 @@
   "attributes": {
     "type": "3",
     "config": {
-      "appId": "{{discoveryAPPId}",
+      "appId": "{{discoveryAPPId}}",
       "methodName": "/api/v1/discovery/workflows/domain/instances/{domainName}/functions/data",
       "httpVerb": "GET"
     }

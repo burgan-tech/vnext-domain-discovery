@@ -1,11 +1,11 @@
 using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
-
+using BBT.Workflow.Scripting.Functions;
 /// <summary>
 /// Register Domain Mapping - Creates new domain in Redis
 /// </summary>
-public class RegisterDomainMapping : IMapping
+public class RegisterDomainMapping :ScriptBase, IMapping
 {
     public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
     {
@@ -22,7 +22,10 @@ public class RegisterDomainMapping : IMapping
             var healthUrl = context.Instance?.Data?.healthUrl;
             var appId = context.Instance?.Data?.appId;
             // var flows = context.Instance?.Data?.flows;
-
+            var daprHttpPort = GetConfigValue("DAPR_HTTP_PORT");
+            var daprStateStore = GetConfigValue("DAPR_STATE_STORE_NAME");
+            string url="http://localhost:"+daprHttpPort+"/v1.0/state/"+daprStateStore;
+            httpTask.SetUrl(url);
             // Prepare domain data for Dapr State Store API
             // Dapr State Store expects array of state items
             var stateItem = new
