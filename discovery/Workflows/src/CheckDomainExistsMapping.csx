@@ -1,23 +1,28 @@
 using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
-
+using BBT.Workflow.Scripting.Functions;
 /// <summary>
 /// Check Domain Exists Mapping - Queries domain workflow instance for existence using DaprServiceTask
 /// Endpoint: /api/v1/discovery/workflows/domain/instances/{domainName}/functions/data
 /// </summary>
-public class CheckDomainExistsMapping : IMapping
+public class CheckDomainExistsMapping :ScriptBase, IMapping
 {
     public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
     {
         try
         {
-            var daprServiceTask = task as DaprServiceTask;
+            string? appId = GetConfigValue("OrchestrationApi:AppId");
+            string? daprAppId = GetConfigValue("DAPR_APP_ID");
+           
+            var  daprServiceTask= task as DaprServiceTask;
             if (daprServiceTask == null)
             {
                 throw new InvalidOperationException("Task must be a DaprServiceTask");
             }
-
+            LogInformation("AppId ariyorum dapr:"+daprAppId);
+            LogInformation("AppId ariyorum exec set:"+appId);
+            daprServiceTask.SetAppId(daprAppId);
             var domainName = context.Instance?.Data?.domainName;
             
             // Replace {domainName} placeholder in methodName
@@ -113,6 +118,7 @@ public class CheckDomainExistsMapping : IMapping
                         existingAppId = (string?)null,
                         error = "Unexpected status code during domain instance check",
                         statusCode = statusCode,
+                        check=responseData.data,
                         checkedAt = DateTime.UtcNow
                     },
                     Tags = new[] { "domain", "exception", "error" }

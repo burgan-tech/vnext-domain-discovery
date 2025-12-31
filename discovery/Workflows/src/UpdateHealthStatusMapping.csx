@@ -1,11 +1,11 @@
 using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
-
+using BBT.Workflow.Scripting.Functions;
 /// <summary>
 /// Update Health Status Mapping - Updates health status in Redis, preserving other fields
 /// </summary>
-public class UpdateHealthStatusMapping : IMapping
+public class UpdateHealthStatusMapping :ScriptBase, IMapping
 {
     public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
     {
@@ -86,6 +86,10 @@ public class UpdateHealthStatusMapping : IMapping
 
             // Set body for HTTP POST request
             httpTask.SetBody(new[] { stateItem });
+            var daprHttpPort = GetConfigValue("DAPR_HTTP_PORT");
+            var daprStateStore = GetConfigValue("DAPR_STATE_STORE_NAME");
+            string url="http://localhost:"+daprHttpPort+"/v1.0/state/"+daprStateStore;
+            httpTask.SetUrl(url);
 
             return Task.FromResult(new ScriptResponse());
         }

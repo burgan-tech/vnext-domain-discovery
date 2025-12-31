@@ -44,8 +44,7 @@ public class UpdateDomainLifecycleMapping : IMapping
                 domainName = domainName,
                 baseUrl = baseUrl,
                 healthUrl = healthUrl,
-                appId = appId,
-                eTag = eTag
+                appId = appId
             });
 
             return Task.FromResult(new ScriptResponse());
@@ -74,7 +73,13 @@ public class UpdateDomainLifecycleMapping : IMapping
                     {
                         domainLifecycleUpdateTriggered = true,
                         triggeredAt = DateTime.UtcNow,
-                        status = "DOMAIN_LIFECYCLE_UPDATE_TRIGGERED"
+                        status = "DOMAIN_LIFECYCLE_UPDATE_TRIGGERED",
+                         domainRegistration = new
+                        {
+                            success = true,
+                            operation = "update",
+                            registeredAt = DateTime.UtcNow
+                        }
                     },
                     Tags = new[] { "domain", "lifecycle", "update", "triggered", "direct-trigger", "success" }
                 };
@@ -88,7 +93,15 @@ public class UpdateDomainLifecycleMapping : IMapping
                     {
                         domainLifecycleUpdateTriggered = false,
                         error = context.Body?.errorMessage ?? "Failed to trigger domain lifecycle update",
-                        triggeredAt = DateTime.UtcNow
+                        triggeredAt = DateTime.UtcNow,
+                         domainRegistration = new
+                        {
+                            success = false,
+                            operation = "update",
+                            error = "Failed to update cache domain",
+                            statusCode = context.Body?.statusCode ?? 500,
+                            registeredAt = DateTime.UtcNow
+                        }
                     },
                     Tags = new[] { "domain", "lifecycle", "update", "direct-trigger", "error" }
                 };
@@ -104,7 +117,15 @@ public class UpdateDomainLifecycleMapping : IMapping
                     domainLifecycleUpdateTriggered = false,
                     error = "Exception during domain lifecycle update trigger",
                     errorDescription = ex.Message,
-                    triggeredAt = DateTime.UtcNow
+                    triggeredAt = DateTime.UtcNow,
+                     domainRegistration = new
+                    {
+                        success = false,
+                        operation = "update",
+                        error = "Exception during domain update",
+                        errorDescription = ex.Message,
+                        registeredAt = DateTime.UtcNow
+                    }
                 },
                 Tags = new[] { "domain", "lifecycle", "update", "exception", "error" }
             };

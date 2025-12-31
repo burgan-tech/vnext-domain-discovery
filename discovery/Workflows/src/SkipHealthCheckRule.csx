@@ -11,35 +11,8 @@ public class SkipHealthCheckRule : IConditionMapping
     {
         try
         {
-            if (context?.Instance?.Data == null)
-                return true;  // If no data, skip
-
-            // Check if healthUrl was retrieved
-            var healthUrlRetrieved = context.Instance.Data.healthUrlRetrieved;
-            if (healthUrlRetrieved != true)
-                return true;  // No healthUrl, skip
-
-            // Check if it's an existing domain
-            var domainExists = context.Instance.Data.domainExists;
-            if (domainExists == true)
-            {
-                // For existing domain, check if healthUrl changed
-                var existingDomain = context.Instance.Data.existingDomain;
-                var domainData = context.Instance.Data.domainData;
-                
-                if (existingDomain != null && domainData != null)
-                {
-                    var existingHealthUrl = existingDomain.healthUrl?.ToString();
-                    var newHealthUrl = domainData.healthUrl?.ToString();
-                    
-                    // If healthUrl didn't change, skip
-                    if (existingHealthUrl == newHealthUrl)
-                        return true;
-                }
-            }
-
-            // HealthUrl exists and (new domain OR changed), don't skip
-            return false;
+    
+            return true;
         }
         catch (Exception)
         {

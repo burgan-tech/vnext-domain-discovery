@@ -1,29 +1,33 @@
 using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
-
+using BBT.Workflow.Scripting.Functions;
 /// <summary>
 /// Get Domain Health URL Mapping - Queries Redis for domain and extracts health URL
 /// </summary>
-public class GetDomainHealthUrlMapping : IMapping
+public class GetDomainHealthUrlMapping :ScriptBase, IMapping
 {
     public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
     {
         try
         {
             var httpTask = task as HttpTask;
+            //DAPR_HTTP_PORT
+            var daprHttpPort = GetConfigValue("DAPR_HTTP_PORT");
             if (httpTask == null)
             {
                 throw new InvalidOperationException("Task must be an HttpTask");
             }
 
             var domainName = context.Instance?.Data?.domainName;
-            
-            // Replace {domainName} placeholder in URL
-            if (httpTask.Url != null)
-            {
-                httpTask.SetUrl(httpTask.Url.Replace("{domainName}", domainName?.ToString() ?? ""));
-            }
+            var daprStateStore = GetConfigValue("DAPR_STATE_STORE_NAME");
+            string url="http://localhost:"+daprHttpPort+"/v1.0/state/"+daprStateStore+"/domain:"+domainName;
+            httpTask.SetUrl(url);
+            // // Replace {domainName} placeholder in URL
+            // if (httpTask.Url != null)
+            // {
+            //     httpTask.SetUrl(httpTask.Url.Replace("{domainName}", domainName?.ToString() ?? ""));
+            // }
 
             return Task.FromResult(new ScriptResponse());
         }
