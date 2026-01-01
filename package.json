@@ -1,6 +1,6 @@
 {
   "name": "@burgan-tech/vnext-discovery",
-  "version": "0.0.6",
+  "version": "0.0.0",
   "description": "vNext Domain Discovery",
   "main": "index.js",
   "scripts": {
