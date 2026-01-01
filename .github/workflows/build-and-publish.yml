@@ -1,0 +1,768 @@
+name: vNext Build and Publish to NPM
+
+on:
+  push:
+    branches:
+      - 'release-v*'
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: 'Override version (e.g., 1.0.6). Leave empty to auto-calculate from branch.'
+        required: false
+        type: string
+      force_publish:
+        description: 'Force publish package even if it already exists'
+        required: false
+        default: false
+        type: boolean
+      registry_target:
+        description: 'Target registry for publishing'
+        required: false
+        default: 'npmjs'
+        type: choice
+        options:
+          - 'npmjs'
+          - 'github'
+          - 'both'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      reference_published: ${{ steps.publish_reference.outputs.published }}
+      runtime_published: ${{ steps.publish_runtime.outputs.published }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for version calculation
+        token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}  # Use PAT for branch protection bypass
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+    
+    - name: Calculate version
+      id: version
+      run: |
+        # Check if version is manually provided
+        if [ -n "${{ github.event.inputs.version_override }}" ]; then
+          VERSION="${{ github.event.inputs.version_override }}"
+          echo "Using manual version override: $VERSION"
+        else
+          # Extract version from branch name (e.g., release-v1.0 -> 1.0)
+          BRANCH_NAME="${{ github.ref_name }}"
+          
+          if [[ "$BRANCH_NAME" =~ ^release-v([0-9]+\.[0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+            echo "Base version from branch: $BASE_VERSION"
+            
+            # Find the next available patch version
+            PATCH=0
+            while true; do
+              VERSION="${BASE_VERSION}.${PATCH}"
+              TAG="v${VERSION}"
+              
+              # Check if this tag already exists
+              if git tag -l "$TAG" | grep -q "^$TAG$"; then
+                echo "Version $VERSION already exists, trying next patch version..."
+                PATCH=$((PATCH + 1))
+              else
+                echo "Found available version: $VERSION"
+                break
+              fi
+              
+              # Safety check to prevent infinite loop
+              if [ $PATCH -gt 100 ]; then
+                echo "Error: Could not find available patch version after 100 attempts"
+                exit 1
+              fi
+            done
+          else
+            # Fallback to version from vnext.config.json and increment patch
+            echo "Branch name doesn't match release-vX.Y pattern, using version from vnext.config.json"
+            if [ -f "vnext.config.json" ]; then
+              CURRENT_VERSION=$(node -p "require('./vnext.config.json').version")
+            else
+              echo "❌ Error: vnext.config.json not found"
+              exit 1
+            fi
+            
+            if [ -z "$CURRENT_VERSION" ]; then
+              echo "❌ Error: Could not determine version from vnext.config.json"
+              exit 1
+            fi
+            
+            # Split version into parts and increment patch
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            echo "Incremented version: $VERSION"
+          fi
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Final version: $VERSION"
+    
+    - name: Update version in package.json and vnext.config.json
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        echo "📝 Updating version to $VERSION in package.json and vnext.config.json..."
+        
+        # Update package.json version
+        if [ -f "package.json" ]; then
+          jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "✅ Updated package.json version to $VERSION"
+        else
+          echo "⚠️ package.json not found"
+        fi
+        
+        # Update vnext.config.json version
+        if [ -f "vnext.config.json" ]; then
+          jq --arg version "$VERSION" '.version = $version' vnext.config.json > vnext.config.json.tmp && mv vnext.config.json.tmp vnext.config.json
+          echo "✅ Updated vnext.config.json version to $VERSION"
+        else
+          echo "⚠️ vnext.config.json not found"
+        fi
+        
+        # Display updated versions
+        echo ""
+        echo "📋 Updated versions:"
+        echo "package.json version: $(jq -r '.version' package.json)"
+        echo "vnext.config.json version: $(jq -r '.version' vnext.config.json)"
+    
+    - name: Commit version updates
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Check if there are changes to commit
+        if git diff --quiet package.json vnext.config.json; then
+          echo "ℹ️ No version changes to commit"
+        else
+          echo "📦 Committing version updates..."
+          
+          git add package.json vnext.config.json
+          git commit -m "chore: bump version to $VERSION [skip ci]"
+          git push origin ${{ github.ref_name }}
+          
+          echo "✅ Version updates committed and pushed to ${{ github.ref_name }}"
+        fi
+    
+    - name: Install dependencies
+      run: |
+        echo "Installing dependencies..."
+        if [ -f "package-lock.json" ]; then
+          npm ci
+        else
+          npm install
+        fi
+        echo "Dependencies installed successfully"
+    
+    - name: Validate vNext components
+      run: |
+        echo "🔍 Validating vNext components..."
+        
+        # Run validation using npm script
+        if npm run validate; then
+          echo "✅ vNext validation completed successfully"
+        else
+          echo "❌ vNext validation failed"
+          echo "Please check the validation errors above and fix them before proceeding"
+          exit 1
+        fi
+    
+    
+    - name: Build Reference Package
+      run: |
+        echo "🏗️ Building Reference package..."
+        
+        # Build reference package using npm script
+        if npm run build -- -t reference -o dist-reference; then
+          echo "✅ Reference package built successfully"
+          
+          # List contents of reference build
+          echo "Reference package contents:"
+          ls -la dist-reference/
+        else
+          echo "❌ Reference package build failed"
+          exit 1
+        fi
+    
+    - name: Build Runtime Package
+      run: |
+        echo "🏗️ Building Runtime package..."
+        
+        # Build runtime package using npm script
+        if npm run build -- -t runtime -o dist-runtime; then
+          echo "✅ Runtime package built successfully"
+          
+          # List contents of runtime build
+          echo "Runtime package contents:"
+          ls -la dist-runtime/
+        else
+          echo "❌ Runtime package build failed"
+          exit 1
+        fi
+    
+    - name: Prepare Reference Package for Publishing
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        # Create package.json for reference package
+        cd dist-reference
+        
+        cat > package.json << EOF
+        {
+          "name": "@burgan-tech/vnext-discovery-reference",
+          "version": "$VERSION",
+          "description": "vNext Service Discovery - Reference Package for cross-domain usage",
+          "main": "index.js",
+          "type": "module",
+          "keywords": ["vnext", "workflow", "reference", "domain", "burgan"],
+          "author": "Burgan Technology",
+          "license": "MIT",
+          "repository": {
+            "type": "git",
+            "url": "git+https://github.com/${{ github.repository }}.git"
+          },
+          "bugs": {
+            "url": "https://github.com/${{ github.repository }}/issues"
+          },
+          "homepage": "https://github.com/${{ github.repository }}#readme",
+          "publishConfig": {
+            "access": "public"
+          }
+        }
+        EOF
+        
+        echo "Reference package.json created:"
+        cat package.json | jq '.'
+        
+        cd ..
+    
+    - name: Prepare Runtime Package for Publishing
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        # Create package.json for runtime package
+        cd dist-runtime
+        
+        cat > package.json << EOF
+        {
+          "name": "@burgan-tech/vnext-discovery-runtime",
+          "version": "$VERSION",
+          "description": "vNext Service Discovery - Runtime Package for engine deployment",
+          "main": "index.js",
+          "type": "module",
+          "keywords": ["vnext", "workflow", "runtime", "domain", "burgan"],
+          "author": "Burgan Technology",
+          "license": "MIT",
+          "repository": {
+            "type": "git",
+            "url": "git+https://github.com/${{ github.repository }}.git"
+          },
+          "bugs": {
+            "url": "https://github.com/${{ github.repository }}/issues"
+          },
+          "homepage": "https://github.com/${{ github.repository }}#readme",
+          "publishConfig": {
+            "access": "public"
+          }
+        }
+        EOF
+        
+        echo "Runtime package.json created:"
+        cat package.json | jq '.'
+        
+        cd ..
+    
+    - name: Create Reference Package Tarball
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        cd dist-reference
+        npm pack
+        
+        # Rename tarball for clarity
+        TARBALL="burgan-tech-vnext-discovery-reference-${VERSION}.tgz"
+        
+        if [ -f "$TARBALL" ]; then
+          echo "Reference package tarball created: $TARBALL"
+          ls -la "$TARBALL"
+          
+          # Verify package contents
+          echo "Reference package contents:"
+          tar -tzf "$TARBALL" | head -20
+        else
+          echo "❌ Failed to create reference package tarball"
+          ls -la *.tgz || echo "No tgz files found"
+          exit 1
+        fi
+        
+        cd ..
+    
+    - name: Create Runtime Package Tarball
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        cd dist-runtime
+        npm pack
+        
+        # Rename tarball for clarity
+        TARBALL="burgan-tech-vnext-discovery-runtime-${VERSION}.tgz"
+        
+        if [ -f "$TARBALL" ]; then
+          echo "Runtime package tarball created: $TARBALL"
+          ls -la "$TARBALL"
+          
+          # Verify package contents
+          echo "Runtime package contents:"
+          tar -tzf "$TARBALL" | head -20
+        else
+          echo "❌ Failed to create runtime package tarball"
+          ls -la *.tgz || echo "No tgz files found"
+          exit 1
+        fi
+        
+        cd ..
+    
+    - name: Upload Reference Package Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vnext-discovery-reference-${{ steps.version.outputs.version }}
+        path: "dist-reference/*.tgz"
+        retention-days: 30
+    
+    - name: Upload Runtime Package Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vnext-discovery-runtime-${{ steps.version.outputs.version }}
+        path: "dist-runtime/*.tgz"
+        retention-days: 30
+    
+    - name: Publish Reference Package to NPM
+      id: publish_reference
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        REGISTRY_TARGET="${{ github.event.inputs.registry_target || 'npmjs' }}"
+        PUBLISHED="false"
+        
+        echo "🚀 Publishing Reference package to $REGISTRY_TARGET..."
+        
+        cd dist-reference
+        
+        # Function to publish to NPM.js
+        publish_to_npmjs() {
+          echo "📦 Publishing Reference package to NPM.js..."
+          
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "❌ Error: NPM_TOKEN secret is not configured"
+            echo "Please add your NPM token as a repository secret named 'NPM_TOKEN'"
+            echo "Get your token from: https://www.npmjs.com/settings/tokens"
+            return 1
+          fi
+          
+          # Configure npm registry for NPM.js
+          npm config set registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken $NODE_AUTH_TOKEN
+          
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force_publish }}" == "true" ]; then
+            echo "⚠️  Force publish enabled"
+            FORCE_FLAG="--force"
+          fi
+          
+          # Attempt to publish
+          if npm publish $FORCE_FLAG --access public --registry https://registry.npmjs.org/; then
+            echo "✅ Successfully published Reference package to NPM.js"
+            return 0
+          else
+            echo "❌ Failed to publish Reference package to NPM.js"
+            echo "This might be because the package version already exists"
+            return 1
+          fi
+        }
+        
+        # Function to publish to GitHub Packages
+        publish_to_github() {
+          echo "📦 Publishing Reference package to GitHub Packages..."
+          
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ Error: GITHUB_TOKEN is not available"
+            return 1
+          fi
+          
+          # Configure npm for GitHub Packages
+          npm config set registry https://npm.pkg.github.com
+          npm config set //npm.pkg.github.com/:_authToken $GITHUB_TOKEN
+          
+          # Ensure publishConfig is set for GitHub Packages
+          jq '.publishConfig = {"registry": "https://npm.pkg.github.com", "access": "public"}' package.json > package.json.tmp && mv package.json.tmp package.json
+          
+          # Attempt to publish
+          if npm publish --registry https://npm.pkg.github.com; then
+            echo "✅ Successfully published Reference package to GitHub Packages"
+            return 0
+          else
+            echo "❌ Failed to publish Reference package to GitHub Packages"
+            return 1
+          fi
+        }
+        
+        # Publish based on target
+        SUCCESS_COUNT=0
+        TOTAL_ATTEMPTS=0
+        
+        case "$REGISTRY_TARGET" in
+          "npmjs")
+            TOTAL_ATTEMPTS=1
+            if publish_to_npmjs; then
+              SUCCESS_COUNT=1
+              PUBLISHED="true"
+            fi
+            ;;
+          "github")
+            TOTAL_ATTEMPTS=1
+            if publish_to_github; then
+              SUCCESS_COUNT=1
+              PUBLISHED="true"
+            fi
+            ;;
+          "both")
+            TOTAL_ATTEMPTS=2
+            if publish_to_npmjs; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              PUBLISHED="true"
+            fi
+            
+            if publish_to_github; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              PUBLISHED="true"
+            fi
+            ;;
+        esac
+        
+        echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
+        
+        echo "📊 Reference Package Publication Summary:"
+        echo "   Successfully published: $SUCCESS_COUNT/$TOTAL_ATTEMPTS registries"
+        
+        if [ "$SUCCESS_COUNT" -eq 0 ]; then
+          echo "❌ Failed to publish Reference package to any registry"
+          if [ "${{ github.event.inputs.force_publish }}" != "true" ]; then
+            echo "💡 Tip: If you want to republish existing versions, use the 'force_publish' option"
+          fi
+          exit 1
+        elif [ "$SUCCESS_COUNT" -lt "$TOTAL_ATTEMPTS" ]; then
+          echo "⚠️  Some registries failed, but at least one succeeded"
+        else
+          echo "🎉 Published Reference package to all target registries successfully!"
+        fi
+        
+        cd ..
+    
+    - name: Publish Runtime Package to NPM
+      id: publish_runtime
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        REGISTRY_TARGET="${{ github.event.inputs.registry_target || 'npmjs' }}"
+        PUBLISHED="false"
+        
+        echo "🚀 Publishing Runtime package to $REGISTRY_TARGET..."
+        
+        cd dist-runtime
+        
+        # Function to publish to NPM.js
+        publish_to_npmjs() {
+          echo "📦 Publishing Runtime package to NPM.js..."
+          
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "❌ Error: NPM_TOKEN secret is not configured"
+            echo "Please add your NPM token as a repository secret named 'NPM_TOKEN'"
+            echo "Get your token from: https://www.npmjs.com/settings/tokens"
+            return 1
+          fi
+          
+          # Configure npm registry for NPM.js
+          npm config set registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken $NODE_AUTH_TOKEN
+          
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force_publish }}" == "true" ]; then
+            echo "⚠️  Force publish enabled"
+            FORCE_FLAG="--force"
+          fi
+          
+          # Attempt to publish
+          if npm publish $FORCE_FLAG --access public --registry https://registry.npmjs.org/; then
+            echo "✅ Successfully published Runtime package to NPM.js"
+            return 0
+          else
+            echo "❌ Failed to publish Runtime package to NPM.js"
+            echo "This might be because the package version already exists"
+            return 1
+          fi
+        }
+        
+        # Function to publish to GitHub Packages
+        publish_to_github() {
+          echo "📦 Publishing Runtime package to GitHub Packages..."
+          
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ Error: GITHUB_TOKEN is not available"
+            return 1
+          fi
+          
+          # Configure npm for GitHub Packages
+          npm config set registry https://npm.pkg.github.com
+          npm config set //npm.pkg.github.com/:_authToken $GITHUB_TOKEN
+          
+          # Ensure publishConfig is set for GitHub Packages
+          jq '.publishConfig = {"registry": "https://npm.pkg.github.com", "access": "public"}' package.json > package.json.tmp && mv package.json.tmp package.json
+          
+          # Attempt to publish
+          if npm publish --registry https://npm.pkg.github.com; then
+            echo "✅ Successfully published Runtime package to GitHub Packages"
+            return 0
+          else
+            echo "❌ Failed to publish Runtime package to GitHub Packages"
+            return 1
+          fi
+        }
+        
+        # Publish based on target
+        SUCCESS_COUNT=0
+        TOTAL_ATTEMPTS=0
+        
+        case "$REGISTRY_TARGET" in
+          "npmjs")
+            TOTAL_ATTEMPTS=1
+            if publish_to_npmjs; then
+              SUCCESS_COUNT=1
+              PUBLISHED="true"
+            fi
+            ;;
+          "github")
+            TOTAL_ATTEMPTS=1
+            if publish_to_github; then
+              SUCCESS_COUNT=1
+              PUBLISHED="true"
+            fi
+            ;;
+          "both")
+            TOTAL_ATTEMPTS=2
+            if publish_to_npmjs; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              PUBLISHED="true"
+            fi
+            
+            if publish_to_github; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              PUBLISHED="true"
+            fi
+            ;;
+        esac
+        
+        echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
+        
+        echo "📊 Runtime Package Publication Summary:"
+        echo "   Successfully published: $SUCCESS_COUNT/$TOTAL_ATTEMPTS registries"
+        
+        if [ "$SUCCESS_COUNT" -eq 0 ]; then
+          echo "❌ Failed to publish Runtime package to any registry"
+          if [ "${{ github.event.inputs.force_publish }}" != "true" ]; then
+            echo "💡 Tip: If you want to republish existing versions, use the 'force_publish' option"
+          fi
+          exit 1
+        elif [ "$SUCCESS_COUNT" -lt "$TOTAL_ATTEMPTS" ]; then
+          echo "⚠️  Some registries failed, but at least one succeeded"
+        else
+          echo "🎉 Published Runtime package to all target registries successfully!"
+        fi
+        
+        cd ..
+    
+    - name: Create Git Tag
+      if: steps.publish_reference.outputs.published == 'true' || steps.publish_runtime.outputs.published == 'true'
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        TAG="v$VERSION"
+        
+        # Create and push the tag
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        if git tag -l "$TAG" | grep -q "^$TAG$"; then
+          echo "⚠️  Tag $TAG already exists, skipping tag creation"
+        else
+          git tag -a "$TAG" -m "Release version $VERSION"
+          git push origin "$TAG"
+          echo "✅ Created and pushed tag: $TAG"
+        fi
+    
+    - name: Create GitHub Release
+      if: steps.publish_reference.outputs.published == 'true' || steps.publish_runtime.outputs.published == 'true'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        release_name: Release v${{ steps.version.outputs.version }}
+        body: |
+          ## 🚀 vNext Service Discovery Release v${{ steps.version.outputs.version }}
+          
+          ### 📦 Installation
+          
+          #### Reference Package (Cross-domain usage)
+          ```bash
+          npm install @burgan-tech/vnext-discovery-reference@${{ steps.version.outputs.version }}
+          ```
+          
+          #### Runtime Package (Engine deployment)
+          ```bash
+          npm install @burgan-tech/vnext-discovery-runtime@${{ steps.version.outputs.version }}
+          ```
+          
+          ### 🔗 Package Links
+          - [Reference Package on NPM](https://www.npmjs.com/package/@burgan-tech/vnext-discovery-reference)
+          - [Runtime Package on NPM](https://www.npmjs.com/package/@burgan-tech/vnext-discovery-runtime)
+          - [GitHub Packages](https://github.com/${{ github.repository }}/packages)
+          
+          ### 📋 Package Types
+          
+          #### Reference Package
+          - Contains only exported components
+          - Optimized for cross-domain usage
+          - References resolved to payloads
+          - Used by other domains for component references
+          
+          #### Runtime Package
+          - Contains complete domain structure
+          - Optimized for engine deployment
+          - All supporting files included
+          - Used by vNext runtime engine
+          
+          ### 📚 Usage
+          
+          #### Reference Package
+          ```javascript
+          import * as coreComponents from '@burgan-tech/vnext-discovery-reference';
+          
+          // Access exported workflows, functions, etc.
+          const workflow = coreComponents.workflows['my-workflow'];
+          ```
+          
+          #### Runtime Package
+          ```javascript
+          import * as coreDomain from '@burgan-tech/vnext-discovery-runtime';
+          
+          // Complete domain structure for runtime
+          const domain = coreDomain.domain;
+          ```
+          
+          ### ✅ Validation
+          This release has been validated using project validation scripts:
+          - ✅ Schema validation passed
+          - ✅ JSON syntax validation completed
+          - ✅ Build verification successful
+          
+          ### 📋 Build Information
+          - **Reference Package Published**: ${{ steps.publish_reference.outputs.published }}
+          - **Runtime Package Published**: ${{ steps.publish_runtime.outputs.published }}
+          - **Branch**: ${{ github.ref_name }}
+          - **Commit**: ${{ github.sha }}
+          
+          ---
+          *This release was automatically created by GitHub Actions*
+        draft: false
+        prerelease: false
+    
+    - name: Summary
+      if: always()
+      run: |
+        echo "## 📦 vNext Service Discovery Publishing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Version Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "${{ github.event.inputs.version_override }}" ]; then
+          echo "- **Version Override**: Used manual version override" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ github.event.inputs.force_publish }}" == "true" ]; then
+          echo "- **Force Publish**: Enabled" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        REGISTRY_TARGET="${{ github.event.inputs.registry_target || 'npmjs' }}"
+        echo "- **Target Registry**: $REGISTRY_TARGET" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Package Information" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "#### Reference Package" >> $GITHUB_STEP_SUMMARY
+        echo "- **Name**: \`@burgan-tech/vnext-discovery-reference\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Published**: ${{ steps.publish_reference.outputs.published }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Purpose**: Cross-domain component references" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "#### Runtime Package" >> $GITHUB_STEP_SUMMARY
+        echo "- **Name**: \`@burgan-tech/vnext-discovery-runtime\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Published**: ${{ steps.publish_runtime.outputs.published }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Purpose**: Engine deployment and runtime execution" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.publish_reference.outputs.published }}" == "true" ] || [ "${{ steps.publish_runtime.outputs.published }}" == "true" ]; then
+          echo "### 🎉 Published Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Installation Instructions" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Reference Package (for cross-domain usage)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @burgan-tech/vnext-discovery-reference@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Runtime Package (for engine deployment)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @burgan-tech/vnext-discovery-runtime@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ❌ Publication Failed" >> $GITHUB_STEP_SUMMARY
+          echo "One or both packages were not successfully published. Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+        echo "- [Reference Package on NPM](https://www.npmjs.com/package/@burgan-tech/vnext-discovery-reference)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Runtime Package on NPM](https://www.npmjs.com/package/@burgan-tech/vnext-discovery-runtime)" >> $GITHUB_STEP_SUMMARY
+        echo "- [GitHub Repository](https://github.com/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Workflow Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Documentation](https://github.com/${{ github.repository }}#readme)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. Packages will be available on NPM (may take a few minutes to appear in search)" >> $GITHUB_STEP_SUMMARY
+        echo "2. Reference package: Use for cross-domain component references" >> $GITHUB_STEP_SUMMARY
+        echo "3. Runtime package: Deploy to vNext runtime engine" >> $GITHUB_STEP_SUMMARY
+        echo "4. Update consuming domains with new component versions" >> $GITHUB_STEP_SUMMARY
+        echo "5. Test integration with vNext runtime environment" >> $GITHUB_STEP_SUMMARY

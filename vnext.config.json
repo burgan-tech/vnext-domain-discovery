@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "description": "vNext Discovery Domain Definition Configuration",
   "domain": "discovery",
-  "runtimeVersion": "0.0.26",
+  "runtimeVersion": "0.0.28",
   "schemaVersion": "0.0.28",
   "paths": {
     "componentsRoot": "discovery",
