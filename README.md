@@ -61,6 +61,7 @@ After installation, your project structure will be:
 ├── Schemas/
 ├── Tasks/
 ├── Views/
+├── Mappings/
 └── Workflows/
 ```
 
@@ -84,6 +85,9 @@ const workflows = vnextTemplate.getWorkflows();
 // Get all tasks
 const tasks = vnextTemplate.getTasks();
 
+// Get all mappings
+const mappings = vnextTemplate.getMappings();
+
 // Get component path for a specific type
 const schemasPath = vnextTemplate.getComponentPath('schemas');
 ```
@@ -100,6 +104,7 @@ const schemasPath = vnextTemplate.getComponentPath('schemas');
 | `getViews()` | Get all views |
 | `getFunctions()` | Get all functions |
 | `getExtensions()` | Get all extensions |
+| `getMappings()` | Get all mappings |
 | `getDomainName()` | Get domain directory name |
 | `getAvailableTypes()` | Get list of available component types |
 | `getComponentPath(type)` | Get full path for a component type |
@@ -118,7 +123,8 @@ The `vnext.config.json` file allows you to customize paths and exports:
     "tasks": "Tasks",
     "views": "Views",
     "functions": "Functions",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "mappings": "Mappings"
   },
   "exports": {
     "schemas": ["schema1.json", "schema2.json"],
@@ -126,7 +132,8 @@ The `vnext.config.json` file allows you to customize paths and exports:
     "tasks": [],
     "views": [],
     "functions": [],
-    "extensions": []
+    "extensions": [],
+    "mappings": []
   }
 }
 ```
@@ -229,6 +236,7 @@ dist/
 │   ├── Schemas/
 │   ├── Tasks/
 │   ├── Views/
+│   ├── Mappings/
 │   └── Workflows/
 ├── vnext.config.json
 ├── package.json
@@ -245,6 +253,7 @@ dist/
 │   ├── Schemas/        # Only exported files
 │   ├── Tasks/          # Only exported files
 │   ├── Views/          # Only exported files
+│   ├── Mappings/       # Only exported files
 │   └── Workflows/      # Only exported files
 ├── vnext.config.json
 ├── package.json
