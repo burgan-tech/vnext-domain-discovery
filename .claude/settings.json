@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://raw.githubusercontent.com/burgan-tech/vnext-schema/refs/heads/master/.github/workflows/build-and-publish.yml\")"
+    ]
+  }
+}
