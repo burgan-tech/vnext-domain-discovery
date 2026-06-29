@@ -270,3 +270,4 @@ profile-*
 .npmrc.local
 auth.json
 secrets.json
+discovery.link.json
