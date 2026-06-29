@@ -108,9 +108,7 @@
         ],
         "view": null,
         "subFlow": null,
-        "onEntries": [
-       
-        ],
+        "onEntries": [],
         "onExits": [],
         "transitions": [
           {
@@ -179,9 +177,7 @@
         ],
         "view": null,
         "subFlow": null,
-        "onEntries": [
-         
-        ],
+        "onEntries": [],
         "onExits": [],
         "transitions": [
           {
@@ -333,9 +329,7 @@
         ],
         "view": null,
         "subFlow": null,
-        "onEntries": [
-        
-        ],
+        "onEntries": [],
         "onExits": [],
         "transitions": [
           {
