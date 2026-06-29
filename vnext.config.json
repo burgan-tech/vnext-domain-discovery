@@ -2,8 +2,8 @@
   "version": "0.0.2",
   "description": "vNext Discovery Domain Definition Configuration",
   "domain": "discovery",
-  "runtimeVersion": "0.0.59",
-  "schemaVersion": "0.0.45",
+  "runtimeVersion": "0.0.66",
+  "schemaVersion": "0.0.48",
   "paths": {
     "componentsRoot": "discovery",
     "tasks": "Tasks",
