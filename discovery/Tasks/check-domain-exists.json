@@ -12,12 +12,14 @@
     "registration"
   ],
   "attributes": {
-    "type": "3",
+    "type": "13",
     "config": {
-      "appId": "{{discoveryAPPId}}",
-      "methodName": "/api/v1/discovery/workflows/domain/instances/{domainName}/functions/data",
-      "httpVerb": "GET"
+      "domain": "discovery",
+      "flow": "domain",
+      "timeoutSeconds": 30,
+      "acceptedStatusCodes": [
+        "404"
+      ]
     }
   }
 }
-

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "domain": "discovery",
   "flow": "sys-schemas",
-    "flowVersion": "1.0.0",
+  "flowVersion": "1.0.0",
   "tags": [
     "domain",
     "workflow",
@@ -12,7 +12,6 @@
     "registration"
   ],
   "attributes": {
-    "type": "workflow",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://schemas.vnext.com/banking/domain-start.json",
@@ -20,7 +19,10 @@
       "description": "Domain start transition Schema",
       "type": "object",
       "required": [
-        "domainName"
+        "domainName",
+        "baseUrl",
+        "healthUrl",
+        "appId"
       ],
       "properties": {
         "domainName": {
@@ -41,6 +43,7 @@
         }
       },
       "additionalProperties": false
-    }
+    },
+    "type": "workflow"
   }
 }
