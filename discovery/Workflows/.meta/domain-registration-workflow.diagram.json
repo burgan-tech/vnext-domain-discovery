@@ -1,40 +1,44 @@
 {
   "nodePos": {
+    "__start__": {
+      "x": 268,
+      "y": 0
+    },
     "initial": {
-      "x": 100,
-      "y": 240
+      "x": 162,
+      "y": 160,
+      "width": 253,
+      "height": 97
     },
     "register": {
-      "x": 657,
-      "y": 140
+      "x": 0,
+      "y": 594,
+      "width": 181,
+      "height": 97
     },
     "update": {
-      "x": 657,
-      "y": 340
+      "x": 261,
+      "y": 594,
+      "width": 175,
+      "height": 97
     },
-    "upsert-redis": {
-      "x": 1088,
-      "y": 240
-    },
-    "check-health-url": {
-      "x": 1514,
-      "y": 140
-    },
-    "schedule-health-check": {
-      "x": 2060.218223994835,
-      "y": 424.55568442866183
+    "check-domain-need-update": {
+      "x": 297,
+      "y": 377,
+      "width": 241,
+      "height": 97
     },
     "completed": {
-      "x": 2439,
-      "y": 140
+      "x": 382,
+      "y": 811,
+      "width": 148,
+      "height": 62
     },
     "error": {
-      "x": 1514,
-      "y": 340
-    },
-    "__start__": {
-      "x": -296,
-      "y": 240
+      "x": 23,
+      "y": 811,
+      "width": 115,
+      "height": 62
     }
   }
 }
