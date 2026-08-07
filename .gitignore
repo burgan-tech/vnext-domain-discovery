@@ -271,3 +271,6 @@ profile-*
 auth.json
 secrets.json
 discovery.link.json
+
+# vNext Forge managed local runtime
+.vnext-runtime/

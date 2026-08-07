@@ -2,148 +2,194 @@ using System.Threading.Tasks;
 using BBT.Workflow.Scripting;
 using BBT.Workflow.Definitions;
 using BBT.Workflow.Scripting.Functions;
+
 /// <summary>
-/// Check Domain Exists Mapping - Queries domain workflow instance for existence using DaprServiceTask
-/// Endpoint: /api/v1/discovery/workflows/domain/instances/{domainName}/functions/data
+/// Check Domain Exists Mapping - Reads the "domain" lifecycle instance keyed by domainName
+/// using GetInstanceDataTask (task type 13) inside the discovery domain.
+/// "404" is declared in the task config's acceptedStatusCodes, so a missing instance is a
+/// normal result rather than an ErrorBoundary trigger.
+///
+/// Response envelope: { "isSuccess": true, "data": { "data": { ... }, "eTag": "W/\"...\"", "extensions": {} } }
+/// The Data function may also flatten the payload, so both shapes are handled below.
+///
+/// NOTE: the tag property is "eTag" (capital T), not "etag". Reading the wrong casing on a
+/// dynamic throws RuntimeBinderException instead of returning null - see Safe() below.
 /// </summary>
-public class CheckDomainExistsMapping :ScriptBase, IMapping
+public class CheckDomainExistsMapping : ScriptBase, IMapping
 {
-    public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
+    private const string TargetDomain = "discovery";
+    private const string TargetFlow = "domain";
+
+    /// <summary>
+    /// Reads a dynamic member without throwing. "?." only guards a null receiver; an absent
+    /// member on an ExpandoObject / JsonElement-backed dynamic raises RuntimeBinderException.
+    /// Every read of context.Body / context.Instance.Data must go through this.
+    /// </summary>
+    private static object? Safe(Func<object?> read)
     {
         try
         {
-            string? appId = GetConfigValue("OrchestrationApi:AppId");
-            string? daprAppId = GetConfigValue("DAPR_APP_ID");
-           
-            var  daprServiceTask= task as DaprServiceTask;
-            if (daprServiceTask == null)
-            {
-                throw new InvalidOperationException("Task must be a DaprServiceTask");
-            }
-            LogInformation("AppId ariyorum dapr:"+daprAppId);
-            LogInformation("AppId ariyorum exec set:"+appId);
-            daprServiceTask.SetAppId(daprAppId);
-            var domainName = context.Instance?.Data?.domainName;
-            
-            // Replace {domainName} placeholder in methodName
-            // MethodName format: /api/v1/discovery/workflows/domain/instances/{domainName}/functions/data
-            if (!string.IsNullOrEmpty(domainName?.ToString()))
-            {
-                var methodName = daprServiceTask.MethodName?.Replace("{domainName}", domainName.ToString()) ?? 
-                                $"/api/v1/discovery/workflows/domain/instances/{domainName}/functions/data";
-                daprServiceTask.SetMethodName(methodName);
-            }
-
-            return Task.FromResult(new ScriptResponse());
+            return read();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Task.FromResult(new ScriptResponse
-            {
-                Key = "check-domain-error",
-                Data = new { error = ex.Message }
-            });
+            return null;
         }
     }
 
-    public async Task<ScriptResponse> OutputHandler(ScriptContext context)
+    private static string? SafeStr(Func<object?> read)
+    {
+        var value = Safe(read)?.ToString();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static bool SafeBool(Func<object?> read)
+    {
+        var value = Safe(read);
+        if (value is bool flag)
+            return flag;
+        return bool.TryParse(value?.ToString(), out var parsed) && parsed;
+    }
+
+    private static int? SafeInt(Func<object?> read)
+    {
+        var value = Safe(read);
+        if (value == null)
+            return null;
+        return int.TryParse(value.ToString(), out var parsed) ? parsed : (int?)null;
+    }
+
+    public Task<ScriptResponse> InputHandler(WorkflowTask task, ScriptContext context)
+    {
+        var getInstanceDataTask = task as GetInstanceDataTask;
+        if (getInstanceDataTask == null)
+        {
+            throw new InvalidOperationException("Task must be a GetInstanceDataTask");
+        }
+
+        var domainName = SafeStr(() => context.Instance?.Data?.domainName);
+        if (string.IsNullOrWhiteSpace(domainName))
+        {
+            // Fail loudly on purpose: with neither key nor instanceId set the engine falls back
+            // to the CURRENT instance id and would read this workflow's own instance.
+            throw new InvalidOperationException(
+                "domainName is required to resolve the target domain lifecycle instance");
+        }
+
+        getInstanceDataTask.SetDomain(TargetDomain);
+        getInstanceDataTask.SetFlow(TargetFlow);
+        getInstanceDataTask.SetKey(domainName);
+
+        LogInformation($"check-domain-exists -> {TargetDomain}/{TargetFlow} key={domainName}");
+
+        return Task.FromResult(new ScriptResponse());
+    }
+
+    public Task<ScriptResponse> OutputHandler(ScriptContext context)
     {
         try
         {
-            // Workflow Instance Data API returns:
-            // - 200 OK with data (including etag) if instance exists
-            // - 404 Not Found if instance doesn't exist
-            var statusCode = context.Body?.statusCode ?? 500;
-            var responseData = context.Body;
-            
-            // Domain workflow instance exists (200 OK with data)
-            if (statusCode == 200 && responseData != null)
+            var isSuccess = SafeBool(() => context.Body?.isSuccess)
+                         || SafeBool(() => context.Body?.IsSuccess);
+            var statusCode = SafeInt(() => context.Body?.statusCode)
+                          ?? SafeInt(() => context.Body?.StatusCode);
+            var errorCode = SafeStr(() => context.Body?.metadata?.errorCode)
+                         ?? SafeStr(() => context.Body?.Metadata?.ErrorCode);
+            var errorMessage = SafeStr(() => context.Body?.errorMessage)
+                            ?? SafeStr(() => context.Body?.ErrorMessage);
+
+            var notFound = statusCode == 404 || errorCode == "INSTANCE_NOT_FOUND";
+            var payloadPresent = Safe(() => context.Body?.data) != null;
+
+            // Instance found
+            if (!notFound && isSuccess && payloadPresent)
             {
-                // Extract etag from response body (root level, lowercase)
-                // Response format: { "data": { "appId": "...", "healthUrl": "...", "domainName": "...", "baseUrl": "..." }, "etag": "...", "extensions": {} }
-                var eTag = responseData.data?.etag?.ToString();
-                
-                // Extract healthUrl and appId from existing domain data
-                // Domain data structure: direct properties in data object (no underscore prefix)
-                var existingHealthUrl = responseData.data?.data?.healthUrl?.ToString();
-                var existingBaseUrl = responseData.data?.data?.baseUrl?.ToString();
-                var existingAppId = responseData.data?.data?.appId?.ToString();
-                
-                return new ScriptResponse
+                // "eTag" is the documented casing; the instance envelope of GetInstance
+                // responses uses lowercase "etag", so accept both.
+                var eTag = SafeStr(() => context.Body?.data?.eTag)
+                        ?? SafeStr(() => context.Body?.data?.etag);
+
+                // The payload is either { data: {...}, eTag, extensions } or the flattened
+                // instance data itself. Probe the nested shape first.
+                var existingHealthUrl = SafeStr(() => context.Body?.data?.data?.healthUrl)
+                                     ?? SafeStr(() => context.Body?.data?.healthUrl);
+                var existingBaseUrl = SafeStr(() => context.Body?.data?.data?.baseUrl)
+                                   ?? SafeStr(() => context.Body?.data?.baseUrl);
+                var existingAppId = SafeStr(() => context.Body?.data?.data?.appId)
+                                 ?? SafeStr(() => context.Body?.data?.appId);
+
+                return Task.FromResult(new ScriptResponse
                 {
                     Key = "domain-exists",
                     Data = new
                     {
                         domainExists = true,
-                        existingDomain = responseData,
                         instanceETag = eTag,
                         existingHealthUrl = existingHealthUrl,
-                        existingBaseUrl=existingBaseUrl,
+                        existingBaseUrl = existingBaseUrl,
                         existingAppId = existingAppId,
                         checkedAt = DateTime.UtcNow
                     },
                     Tags = new[] { "domain", "exists", "workflow", "instance", "found" }
-                };
+                });
             }
-            // Domain workflow instance not found (404 Not Found)
-            else if (statusCode == 404)
+
+            // Instance does not exist
+            if (notFound)
             {
-                return new ScriptResponse
+                return Task.FromResult(new ScriptResponse
                 {
                     Key = "domain-not-exists",
                     Data = new
                     {
                         domainExists = false,
-                        existingDomain = (object?)null,
                         instanceETag = (string?)null,
                         existingHealthUrl = (string?)null,
+                        existingBaseUrl = (string?)null,
                         existingAppId = (string?)null,
                         checkedAt = DateTime.UtcNow
                     },
                     Tags = new[] { "domain", "not-exists", "workflow", "instance", "not-found" }
-                };
+                });
             }
-            // Unexpected status code
-            else
-            {
-                return new ScriptResponse
-                {
-                    Key = "domain-check-exception",
-                    Data = new
-                    {
-                        domainExists = false,
-                        existingDomain = (object?)null,
-                        instanceETag = (string?)null,
-                        existingHealthUrl = (string?)null,
-                        existingAppId = (string?)null,
-                        error = "Unexpected status code during domain instance check",
-                        statusCode = statusCode,
-                        check=responseData.data,
-                        checkedAt = DateTime.UtcNow
-                    },
-                    Tags = new[] { "domain", "exception", "error" }
-                };
-            }
-        }
-        catch (Exception ex)
-        {
-            return new ScriptResponse
+
+            // Anything else - unexpected response
+            return Task.FromResult(new ScriptResponse
             {
                 Key = "domain-check-exception",
                 Data = new
                 {
                     domainExists = false,
-                    existingDomain = (object?)null,
                     instanceETag = (string?)null,
                     existingHealthUrl = (string?)null,
+                    existingBaseUrl = (string?)null,
+                    existingAppId = (string?)null,
+                    error = "Unexpected response during domain instance check",
+                    errorDescription = errorMessage ?? errorCode,
+                    statusCode = statusCode,
+                    checkedAt = DateTime.UtcNow
+                },
+                Tags = new[] { "domain", "exception", "error" }
+            });
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(new ScriptResponse
+            {
+                Key = "domain-check-exception",
+                Data = new
+                {
+                    domainExists = false,
+                    instanceETag = (string?)null,
+                    existingHealthUrl = (string?)null,
+                    existingBaseUrl = (string?)null,
                     existingAppId = (string?)null,
                     error = "Exception during domain instance check",
                     errorDescription = ex.Message,
                     checkedAt = DateTime.UtcNow
                 },
                 Tags = new[] { "domain", "exception", "error" }
-            };
+            });
         }
     }
 }
-
