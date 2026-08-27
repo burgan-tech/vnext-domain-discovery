@@ -2,8 +2,8 @@
   "version": "1.0.0",
   "description": "vNext Discovery Domain Definition Configuration",
   "domain": "discovery",
-  "runtimeVersion": "0.0.66",
-  "schemaVersion": "0.0.48",
+  "runtimeVersion": "0.0.85",
+  "schemaVersion": "0.0.53",
   "paths": {
     "componentsRoot": "discovery",
     "tasks": "Tasks",
@@ -15,7 +15,9 @@
     "mappings": "Mappings"
   },
   "exports": {
-    "functions": [],
+    "functions": [
+      "domain-lookup"
+    ],
     "workflows": [],
     "tasks": [],
     "views": [],
