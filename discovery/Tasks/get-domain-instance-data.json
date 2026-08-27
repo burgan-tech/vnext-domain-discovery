@@ -1,0 +1,25 @@
+{
+  "key": "get-domain-instance-data",
+  "flow": "sys-tasks",
+  "domain": "discovery",
+  "version": "1.0.0",
+  "flowVersion": "1.0.0",
+  "tags": [
+    "domain",
+    "discovery",
+    "instance",
+    "lookup",
+    "cache-source"
+  ],
+  "attributes": {
+    "type": "13",
+    "config": {
+      "domain": "discovery",
+      "flow": "domain",
+      "timeoutSeconds": 30,
+      "acceptedStatusCodes": [
+        "404"
+      ]
+    }
+  }
+}

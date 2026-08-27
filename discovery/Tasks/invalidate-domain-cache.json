@@ -1,0 +1,20 @@
+{
+  "key": "invalidate-domain-cache",
+  "flow": "sys-tasks",
+  "domain": "discovery",
+  "version": "1.0.0",
+  "flowVersion": "1.0.0",
+  "tags": [
+    "domain",
+    "discovery",
+    "cache",
+    "invalidation",
+    "state-store"
+  ],
+  "attributes": {
+    "type": "17",
+    "config": {
+      "command": "delete"
+    }
+  }
+}
