@@ -34,7 +34,7 @@
         "encoding": "B64",
         "code": "ImRpc2NvdmVyeTpkb21haW46IiArIGNvbnRleHQuUXVlcnlQYXJhbWV0ZXJzLmtleQ=="
       },
-      "ttlInSeconds": 60,
+      "ttlInSeconds": 86400,
       "consistency": "Eventual",
       "bypassOnCacheError": true
     },
