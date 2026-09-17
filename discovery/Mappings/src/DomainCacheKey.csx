@@ -18,10 +18,28 @@
 ///
 /// Returns the UNPREFIXED key. The runtime prepends "custom:" itself on every get/set/delete,
 /// for the function cache gateway and the State Store task alike; never write that prefix here.
+///
+/// ListKey is the SECOND pair maintained here, for the domain-list function:
+///
+///   1. READ  - Functions/domain-list.json, attributes.cache.key (a STATIC key, not an expression:
+///              the function takes no parameters, so there is nothing to compute).
+///   2. EVICT - Workflows/src/InvalidateDomainListCacheMapping.csx (StateStoreTask delete).
+///
+/// Its namespace segment is deliberately "domains" (plural), NOT "domain". Reusing the singular
+/// namespace - e.g. "discovery:domain:list" - would collide byte for byte with For("list"), the
+/// per-domain key of a domain literally named "list": registering it would evict the whole list
+/// cache, and a list-cache eviction would evict that domain's entry. Separate namespaces make the
+/// collision unrepresentable rather than merely unlikely.
 /// </summary>
 public static class DomainCacheKey
 {
     public const string Namespace = "discovery:domain";
+
+    /// <summary>
+    /// The single cache key of the domain-list function (all active domains). Constant, because the
+    /// function takes no parameters: one global entry, evicted on every domain write.
+    /// </summary>
+    public const string ListKey = "discovery:domains:active";
 
     /// <summary>
     /// Builds the logical cache key for a domain name. Returns null only when the name is missing,

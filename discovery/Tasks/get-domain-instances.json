@@ -1,0 +1,24 @@
+{
+  "key": "get-domain-instances",
+  "flow": "sys-tasks",
+  "domain": "discovery",
+  "version": "1.0.0",
+  "flowVersion": "1.0.0",
+  "tags": [
+    "domain",
+    "discovery",
+    "instances",
+    "list",
+    "cache-source"
+  ],
+  "attributes": {
+    "type": "15",
+    "config": {
+      "domain": "discovery",
+      "flow": "domain",
+      "page": 1,
+      "pageSize": 500,
+      "timeoutSeconds": 30
+    }
+  }
+}
