@@ -16,7 +16,8 @@
   },
   "exports": {
     "functions": [
-      "domain-lookup"
+      "domain-lookup",
+      "domain-list"
     ],
     "workflows": [],
     "tasks": [],
